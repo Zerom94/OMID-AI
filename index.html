@@ -18,6 +18,30 @@
         @keyframes blink-yellow { 0%, 100% { background-color: #eab308; opacity: 1; box-shadow: 0 0 8px #eab308; } 50% { background-color: #eab308; opacity: 0.2; box-shadow: none; } }
         .blink-yellow { animation: blink-yellow 1s infinite; }
     </style>
+
+<style id="omid-chat-icon-scale">
+    /* هدف قرار دادن دقیق دکمه چت در گوشه پایین سمت راست */
+    div[class*="fixed"][class*="bottom-"][class*="right-"],
+    button[class*="fixed"][class*="bottom-"][class*="right-"] {
+        transform: scale(1.5) !important;
+        transform-origin: bottom right !important;
+        box-shadow: 0 10px 25px rgba(139, 92, 246, 0.6) !important;
+    }
+    
+    /* بزرگ کردن آیکون SVG یا ایموجی داخل دکمه چت */
+    div[class*="fixed"][class*="bottom-"][class*="right-"] svg,
+    button[class*="fixed"][class*="bottom-"][class*="right-"] svg {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    
+    /* اگر از فونت آیکون استفاده شده باشد */
+    div[class*="fixed"][class*="bottom-"][class*="right-"] i,
+    button[class*="fixed"][class*="bottom-"][class*="right-"] i {
+        font-size: 32px !important;
+    }
+</style>
+
 </head>
 <body class="p-2 md:p-6">
     <div class="max-w-[1600px] mx-auto">
@@ -240,5 +264,183 @@
 
         window.onload = () => { fetchFiles(); setLogsState('idle'); };
     </script>
+
+<div id="preview-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background: #1e1e2e; width: 90%; height: 85%; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #374151;">
+        <div style="padding: 10px 20px; background: #111827; display: flex; justify-content: space-between; align-items: center; color: white;">
+            <span style="font-weight: bold; font-family: sans-serif;">Live Web App Preview</span>
+            <button onclick="document.getElementById('preview-modal').style.display='none'" style="background: #ef4444; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">Close</button>
+        </div>
+        <iframe id="preview-iframe" style="width: 100%; height: 100%; border: none; background: white;"></iframe>
+    </div>
+</div>
+
+<script>
+    // گوش دادن به رویداد code_generated برای نمایش پیش‌نمایش
+    if (typeof EventSource !== 'undefined') {
+        const originalLogEvent = window.logEvent;
+        window.logEvent = function(event, data) {
+            if (originalLogEvent) originalLogEvent(event, data);
+            if (event === 'code_generated' && data.is_html && data.html_content) {
+                document.getElementById('preview-iframe').srcdoc = data.html_content;
+                document.getElementById('preview-modal').style.display = 'flex';
+            }
+        };
+    }
+</script>
+
+
+<script>
+    // این کد به صورت هوشمند تمام پیام‌های سرور را رصد می‌کند
+    const originalEventSource = window.EventSource;
+    window.EventSource = function(url) {
+        const es = new originalEventSource(url);
+        const originalAddEventListener = es.addEventListener;
+        es.addEventListener = function(type, listener, options) {
+            if (type === 'message' || type === 'sse') {
+                const wrappedListener = function(event) {
+                    try {
+                        let data = JSON.parse(event.data);
+                        if (data.event === 'code_generated' && data.data && data.data.is_html && data.data.html_content) {
+                            const modal = document.getElementById('preview-modal');
+                            if (modal) {
+                                document.getElementById('preview-iframe').srcdoc = data.data.html_content;
+                                modal.style.display = 'flex';
+                                console.log("✅ Preview opened successfully!");
+                            }
+                        }
+                    } catch (e) {
+                        // اگر پیام JSON نبود، نادیده بگیر
+                    }
+                    listener(event);
+                };
+                return originalAddEventListener.call(es, type, wrappedListener, options);
+            }
+            return originalAddEventListener.call(es, type, listener, options);
+        };
+        return es;
+    };
+</script>
+
 </body>
 </html>
+
+
+
+<style id="omid-custom-styles">
+    .fixed.bottom-6.right-6 { transform: scale(1.3) !important; transform-origin: bottom right !important; }
+    .omid-preview-btn { background-color: #8b5cf6 !important; color: white !important; border: none !important; padding: 4px 10px !important; border-radius: 6px !important; font-size: 14px !important; cursor: pointer !important; margin-left: 5px !important; }
+    .omid-preview-btn:hover { background-color: #7c3aed !important; }
+</style>
+<div id="custom-preview-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center;">
+    <div style="background:#1e1e2e; width:90%; height:85%; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;">
+        <div style="padding:15px 20px; background:#111827; display:flex; justify-content:space-between; align-items:center; color:white;">
+            <span style="font-weight:bold;">Live App Preview</span>
+            <button id="close-custom-preview" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer;">Close</button>
+        </div>
+        <iframe id="custom-preview-iframe" style="width:100%; height:100%; border:none; background:white;"></iframe>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const observer = new MutationObserver(() => {
+            const saveBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Save'));
+            const codeElement = document.getElementById('code-content') || document.querySelector('pre');
+        const isHtml = codeElement && (codeElement.innerText.includes('<!DOCTYPE html>') || codeElement.innerText.includes('<html'));
+        if (saveBtn && isHtml && !document.getElementById('integrated-preview-btn')) {
+                const btn = document.createElement('button');
+                btn.id = 'integrated-preview-btn';
+                btn.className = 'omid-preview-btn';
+                btn.innerText = 'Preview';
+                btn.onclick = showPreview;
+                saveBtn.parentNode.insertBefore(btn, saveBtn.nextSibling);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        
+        function showPreview() {
+            const codeElement = document.getElementById('code-content') || document.querySelector('pre');
+            if (!codeElement) return;
+            let code = codeElement.innerText || codeElement.textContent;
+            let startIndex = code.indexOf('<!DOCTYPE html>');
+            if (startIndex === -1) startIndex = code.indexOf('<html');
+            if (startIndex === -1) { alert('HTML not found'); return; }
+            let endIndex = code.indexOf('```', startIndex);
+            if (endIndex === -1) endIndex = code.length;
+            document.getElementById('custom-preview-iframe').srcdoc = code.substring(startIndex, endIndex);
+            document.getElementById('custom-preview-modal').style.display = 'flex';
+        }
+        document.getElementById('close-custom-preview').onclick = () => {
+            document.getElementById('custom-preview-modal').style.display = 'none';
+        };
+    });
+</script>
+
+<!-- Integrated Preview Button & Modal -->
+<style id="omid-custom-styles">
+    /* بزرگ کردن لوگوی چت */
+    div[class*="fixed"][class*="bottom"][class*="right"] { 
+        transform: scale(1.4) !important; 
+        transform-origin: bottom right !important; 
+    }
+    .omid-preview-btn { 
+        background-color: #8b5cf6 !important; 
+        color: white !important; 
+        border: none !important; 
+        padding: 4px 10px !important; 
+        border-radius: 6px !important; 
+        font-size: 14px !important; 
+        cursor: pointer !important; 
+        margin-left: 5px !important; 
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .omid-preview-btn:hover { background-color: #7c3aed !important; }
+</style>
+<div id="custom-preview-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center;">
+    <div style="background:#1e1e2e; width:90%; height:85%; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <div style="padding:15px 20px; background:#111827; display:flex; justify-content:space-between; align-items:center; color:white;">
+            <span style="font-weight:bold;">Live App Preview</span>
+            <button id="close-custom-preview" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer;">Close</button>
+        </div>
+        <iframe id="custom-preview-iframe" style="width:100%; height:100%; border:none; background:white;"></iframe>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const observer = new MutationObserver(() => {
+            const saveBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Save'));
+            const codeElement = document.getElementById('code-content') || document.querySelector('pre');
+        const isHtml = codeElement && (codeElement.innerText.includes('<!DOCTYPE html>') || codeElement.innerText.includes('<html'));
+        if (saveBtn && isHtml && !document.getElementById('integrated-preview-btn')) {
+                const btn = document.createElement('button');
+                btn.id = 'integrated-preview-btn';
+                btn.className = 'omid-preview-btn';
+                btn.innerHTML = '👁️ Preview';
+                btn.onclick = showPreview;
+                saveBtn.parentNode.insertBefore(btn, saveBtn.nextSibling);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        
+        function showPreview() {
+            const codeElement = document.getElementById('code-content') || document.querySelector('pre');
+            if (!codeElement) return;
+            let code = codeElement.innerText || codeElement.textContent;
+            let startIndex = code.indexOf('<!DOCTYPE html>');
+            if (startIndex === -1) startIndex = code.indexOf('<html');
+            if (startIndex === -1) { alert('HTML not found'); return; }
+            let endIndex = code.indexOf('```', startIndex);
+            if (endIndex === -1) endIndex = code.length;
+            
+            let cleanCode = code.substring(startIndex, endIndex).trim();
+            
+            document.getElementById('custom-preview-iframe').srcdoc = cleanCode;
+            document.getElementById('custom-preview-modal').style.display = 'flex';
+        }
+        document.getElementById('close-custom-preview').onclick = () => {
+            document.getElementById('custom-preview-modal').style.display = 'none';
+        };
+    });
+</script>

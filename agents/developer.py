@@ -1,9 +1,6 @@
 import os
 import httpx
-import json
 import re
-import subprocess
-from core.auto_git import push_to_github
 from agents.base import BaseAgent, Task, Result
 
 class DeveloperAgent(BaseAgent):
@@ -11,14 +8,30 @@ class DeveloperAgent(BaseAgent):
     display_name = "Developer"
 
     async def execute(self, task: Task) -> Result:
-        self.log_event("working", {"agent": self.name, "status": "Writing code..."})
+        self.log_event("working", {"agent": self.name, "status": "Writing Pro Python App..."})
         
-        prompt = f"""You are an expert Python developer. 
-Task: {task.description}
-Output your response ONLY as a JSON object with this exact structure:
-{{"files": [{{"name": "main.py", "content": "print('hello')"}}]}}
-Do NOT include markdown formatting like ```json.
-"""
+        prompt = (
+            "You are a Principal Full-Stack Engineer and a World-Class UI/UX Designer.\n"
+            f"Task: {task.description}\n"
+            "Build an EXTREMELY ADVANCED, production-ready Streamlit web application.\n"
+            "CRITICAL REQUIREMENTS:\n"
+            "1. Tech Stack: Pure Python (Streamlit). Do NOT use Flask or Django.\n"
+            "2. Modern UI: Use `st.markdown` to inject advanced custom CSS for a 'Cyberpunk/Neon' or 'Premium Glassmorphism' look.\n"
+            "3. Latest Features: Use `st.rerun()` (NOT experimental_rerun). Use `st.toast()` for success messages. "
+            "For modals, you MUST use the decorator syntax: `@st.dialog(\"Title\")` above a function. Do NOT call `st.dialog` as a context manager.\n"
+            "4. Data Persistence: Use Python's built-in `sqlite3` or `json` to save user data to a local file (e.g., `tasks.json`). The app must NOT lose data on refresh.\n"
+            "5. Advanced Features: Add filtering (All, Active, Completed), a progress bar (`st.progress`), and a clean, modern navigation sidebar (`st.sidebar`).\n"
+            "6. No Errors: Every st.button MUST have a unique label. Do NOT use empty labels.\n"
+            "7. Output ONLY ONE file named 'app.py'.\n"
+            "Format exactly like this:\n"
+            "### FILE: app.py\n"
+            "```python\n"
+            "import streamlit as st\n"
+            "# code here\n"
+            "```\n"
+            "Do NOT output any conversational text."
+        )
+        
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
@@ -29,49 +42,34 @@ Do NOT include markdown formatting like ```json.
                 data = resp.json()
                 content = data["choices"][0]["message"]["content"]
                 
-                # Extract JSON safely
-                match = re.search(r'\{.*\}', content, re.DOTALL)
-                if match:
-                    parsed = json.loads(match.group(0))
-                    files = parsed.get("files", [])
+                pattern = r'### FILE:\s*([^\n]+)\n```[^\n]*\n(.*?)```'
+                matches = re.findall(pattern, content, re.DOTALL)
+                
+                if not matches:
+                    return Result(task_id=task.id, success=False, output="Failed to parse files.")
                     
-                    project_dir = f"src/project_{os.urandom(2).hex()}"
-                    os.makedirs(project_dir, exist_ok=True)
+                project_dir = f"src/pyapp_{os.urandom(2).hex()}"
+                os.makedirs(project_dir, exist_ok=True)
+                
+                display_code = ""
+
+                for filename, code_content in matches:
+                    filename = filename.strip()
+                    code_content = code_content.strip()
                     
-                    execution_output = ""
+                    filepath = os.path.join(project_dir, filename)
+                    with open(filepath, "w", encoding="utf-8") as file:
+                        file.write(code_content)
                     
-                    for f in files:
-                        filepath = os.path.join(project_dir, f["name"])
-                        with open(filepath, "w", encoding="utf-8") as file:
-                            file.write(f["content"])
-                        
-                        # اگر فایل پایتون بود، اجرا کن (Sandbox)
-                        if f["name"].endswith(".py"):
-                            self.log_event("working", {"agent": self.name, "status": f"Running {f['name']}..."})
-                            try:
-                                result = subprocess.run(
-                                    ["python3", filepath],
-                                    capture_output=True,
-                                    text=True,
-                                    timeout=15
-                                )
-                                if result.returncode == 0:
-                                    execution_output += f"\n✅ Output of {f['name']}:\n{result.stdout}"
-                                else:
-                                    execution_output += f"\n❌ Error in {f['name']}:\n{result.stderr}"
-                            except subprocess.TimeoutExpired:
-                                execution_output += f"\n⚠️ Timeout: {f['name']} took too long."
-                            except Exception as e:
-                                execution_output += f"\n⚠️ Execution failed: {str(e)}"
-                    
-                    # نمایش نتیجه در داشبورد
-                    self.log_event("chat", {"text": f"اجرای کد:\n{execution_output}"})
-                    self.log_event("code_generated", {"filename": project_dir, "code": content})
-                    git_result = await push_to_github(f"Auto-commit: {task.description}")
-                    self.log_event("chat", {"text": git_result})
-                    
-                    return Result(task_id=task.id, success=True, output=execution_output)
-                else:
-                    return Result(task_id=task.id, success=False, output="Failed to parse JSON")
+                    display_code += f"# === {filename} ===\n{code_content}\n\n"
+                
+                self.log_event("code_generated", {
+                    "filename": project_dir, 
+                    "code": display_code.strip(),
+                    "is_html": False,
+                    "html_content": ""
+                })
+                
+                return Result(task_id=task.id, success=True, output="Pure Python App generated.")
         except Exception as e:
             return Result(task_id=task.id, success=False, output=str(e))
