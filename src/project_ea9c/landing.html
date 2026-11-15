@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMID AI - Landing Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        glass: 'rgba(255,255,255,0.1)',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass {
+            @apply bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 shadow-xl;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="p-6 flex items-center justify-between glass mx-4 mt-4">
+        <div class="flex items-center space-x-3 rtl:space-x-reverse">
+            <!-- Placeholder logo -->
+            <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2L2 7l10 5 10-5-10-5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 17l10 5 10-5"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12l10 5 10-5"></path></svg>
+            <span class="text-2xl font-bold text-indigo-300">OMID AI</span>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="flex-1 flex items-center justify-center mx-4 my-8">
+        <div class="text-center glass p-10 max-w-2xl">
+            <h1 class="text-4xl font-extrabold mb-4 text-indigo-300">
+                تیم هوش مصنوعی خودکار شما
+            </h1>
+            <p class="text-lg text-gray-300 mb-6">
+                با استفاده از جدیدترین تکنولوژی‌های هوش مصنوعی، برنامه‌نویسی خودکار، اسکن امنیتی و حسابرسی پیشرفته را در یک پلتفرم یکپارچه تجربه کنید.
+            </p>
+            <a href="#features" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-6 rounded-lg transition">
+                بیشتر بدانید
+            </a>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="mx-4 my-12">
+        <h2 class="text-3xl font-semibold text-center mb-8 text-indigo-200">ویژگی‌ها</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass p-6 text-center">
+                <h3 class="text-xl font-bold mb-2 text-indigo-300">برنامه‌نویسی خودکار</h3>
+                <p class="text-gray-300">تولید کدهای با کیفیت و بهینه به صورت خودکار با درک زمینه‌ای پروژه شما.</p>
+            </div>
+            <div class="glass p-6 text-center">
+                <h3 class="text-xl font-bold mb-2 text-indigo-300">اسکن امنیتی</h3>
+                <p class="text-gray-300">تحلیل جامع امنیتی، شناسایی آسیب‌پذیری‌ها و ارائه راهکارهای اصلاحی.</p>
+            </div>
+            <div class="glass p-6 text-center">
+                <h3 class="text-xl font-bold mb-2 text-indigo-300">حسابرسی</h3>
+                <p class="text-gray-300">بازرسی دقیق کدها و داده‌ها برای اطمینان از انطباق با استانداردهای صنعتی.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio / Sample Works -->
+    <section class="mx-4 my-12">
+        <h2 class="text-3xl font-semibold text-center mb-8 text-indigo-200">نمونه کارها</h2>
+        <div class="flex flex-col items-center">
+            <p class="text-gray-300 mb-4 text-center max-w-xl">
+                برای مشاهده پروژه‌های منبع باز و نمونه‌های عملی، به مخزن گیت‌هاب ما سر بزنید.
+            </p>
+            <a href="https://github.com/YourUsername/OMID-AI" target="_blank" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-6 rounded-lg transition">
+                گیت‌هاب ما
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="p-6 text-center glass mx-4 mb-4">
+        <p class="text-gray-400">© 2026 OMID AI. تمام حقوق محفوظ است.</p>
+    </footer>
+</body>
+</html>
