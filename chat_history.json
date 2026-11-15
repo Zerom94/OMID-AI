@@ -1,0 +1,42 @@
+[
+  {
+    "role": "user",
+    "content": "اسم من چیه"
+  },
+  {
+    "role": "assistant",
+    "content": "اسم شما امیر است."
+  },
+  {
+    "role": "user",
+    "content": "اسم من چیه"
+  },
+  {
+    "role": "assistant",
+    "content": "اسم شما امیر است."
+  },
+  {
+    "role": "user",
+    "content": "سلام"
+  },
+  {
+    "role": "assistant",
+    "content": "سلام! چطور می‌تونم کمکتون کنم؟"
+  },
+  {
+    "role": "user",
+    "content": "اسم من چیه"
+  },
+  {
+    "role": "assistant",
+    "content": "اسم شما امیر است."
+  },
+  {
+    "role": "user",
+    "content": "نه اشتباه نکن اسم من امید هست"
+  },
+  {
+    "role": "assistant",
+    "content": "متوجه شدم، عذرخواهی می‌کنم. اسم شما امید است. 🙏"
+  }
+]
