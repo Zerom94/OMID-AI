@@ -2,15 +2,26 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import requests
-from dotenv import load_dotenv
 import uvicorn
 import traceback
 
-load_dotenv()
 app = FastAPI()
 
-# خواندن امن کلید از فایل .env
-GROQ_API_KEY = os.getenv("GROQ_API_KEY") 
+# خواندن مستقیم و مطمئن فایل .env
+GROQ_API_KEY = ""
+try:
+    with open("/sdcard/omid-ai/.env", "r") as f:
+        for line in f:
+            if line.startswith("GROQ_API_KEY="):
+                # پاک کردن فاصله‌ها و کوتیشن‌های احتمالی
+                GROQ_API_KEY = line.strip().split("=", 1)[1].strip().strip('"').strip("'")
+                break
+except Exception as e:
+    print(f"Error reading .env: {e}")
+
+if not GROQ_API_KEY:
+    print("\n⚠️ WARNING: API Key is empty! Please check .env file.\n")
+
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 @app.post("/v1/chat/completions")
