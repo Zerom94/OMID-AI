@@ -1,36 +1,19 @@
 import os
 import httpx
 import re
+import json
 from agents.base import BaseAgent, Task, Result
+from core.db import get_db
 
 class DeveloperAgent(BaseAgent):
     name = "Developer"
     display_name = "Developer"
 
     async def execute(self, task: Task) -> Result:
-        self.log_event("working", {"agent": self.name, "status": "Writing Pro Python App..."})
+        self.log_event("working", {"agent": self.name, "status": "Writing Python Script..."})
         
-        prompt = (
-            "You are a Principal Full-Stack Engineer and a World-Class UI/UX Designer.\n"
-            f"Task: {task.description}\n"
-            "Build an EXTREMELY ADVANCED, production-ready Streamlit web application.\n"
-            "CRITICAL REQUIREMENTS:\n"
-            "1. Tech Stack: Pure Python (Streamlit). Do NOT use Flask or Django.\n"
-            "2. Modern UI: Use `st.markdown` to inject advanced custom CSS for a 'Cyberpunk/Neon' or 'Premium Glassmorphism' look.\n"
-            "3. Latest Features: Use `st.rerun()` (NOT experimental_rerun). Use `st.toast()` for success messages. "
-            "For modals, you MUST use the decorator syntax: `@st.dialog(\"Title\")` above a function. Do NOT call `st.dialog` as a context manager.\n"
-            "4. Data Persistence: Use Python's built-in `sqlite3` or `json` to save user data to a local file (e.g., `tasks.json`). The app must NOT lose data on refresh.\n"
-            "5. Advanced Features: Add filtering (All, Active, Completed), a progress bar (`st.progress`), and a clean, modern navigation sidebar (`st.sidebar`).\n"
-            "6. No Errors: Every st.button MUST have a unique label. Do NOT use empty labels.\n"
-            "7. Output ONLY ONE file named 'app.py'.\n"
-            "Format exactly like this:\n"
-            "### FILE: app.py\n"
-            "```python\n"
-            "import streamlit as st\n"
-            "# code here\n"
-            "```\n"
-            "Do NOT output any conversational text."
-        )
+        tick = chr(96) * 3
+        prompt = f" You are an expert Python Developer.\nTask: {task.description}\n\nCRITICAL REQUIREMENTS:\n1. Output ONLY raw Python scripts (NO web frameworks like Streamlit/Flask/Django).\n2. Include only standard libraries or commonly used third-party libs.\n3. Format exactly like this:\nPROJECT_NAME: [Your_Project_Name]\n### FILE: script.py\n{tick}python\n# Your code here\n{tick}\n4. Do NOT output any conversational text outside of this block.\n5. Make the code production-ready with error handling and logging.\n"
         
         try:
             async with httpx.AsyncClient() as client:
@@ -41,35 +24,42 @@ class DeveloperAgent(BaseAgent):
                 )
                 data = resp.json()
                 content = data["choices"][0]["message"]["content"]
-                
-                pattern = r'### FILE:\s*([^\n]+)\n```[^\n]*\n(.*?)```'
+
+                name_match = re.search(r'PROJECT_NAME:\s*([^\n]+)', content)
+                if name_match:
+                    safe_name = re.sub(r'[^a-zA-Z0-9_]', '', name_match.group(1).strip().replace(" ", "_"))
+                else:
+                    safe_name = "Project"
+
+                db = get_db()
+                # اصلاح باگ: اول آی‌دی رو می‌گیریم، بعد مسیر رو می‌سازیم
+                project_id = db.reserve_project(safe_name, "temp")
+                project_dir = f"src/{safe_name}_{project_id}"
+                os.makedirs(project_dir, exist_ok=True)
+
+                triple_bk = chr(96) * 3
+                pattern = r'### FILE:\s*([^\n]+)\n' + triple_bk + r'[^\n]*\n(.*?)' + triple_bk
                 matches = re.findall(pattern, content, re.DOTALL)
-                
+
                 if not matches:
                     return Result(task_id=task.id, success=False, output="Failed to parse files.")
-                    
-                project_dir = f"src/pyapp_{os.urandom(2).hex()}"
-                os.makedirs(project_dir, exist_ok=True)
-                
-                display_code = ""
 
+                display_code = ""
                 for filename, code_content in matches:
                     filename = filename.strip()
                     code_content = code_content.strip()
-                    
                     filepath = os.path.join(project_dir, filename)
                     with open(filepath, "w", encoding="utf-8") as file:
                         file.write(code_content)
-                    
                     display_code += f"# === {filename} ===\n{code_content}\n\n"
-                
+
                 self.log_event("code_generated", {
-                    "filename": project_dir, 
+                    "filename": f"{safe_name}_{project_id}/script.py",
+                    "file_path": f"{project_dir}/script.py",
                     "code": display_code.strip(),
                     "is_html": False,
                     "html_content": ""
                 })
-                
-                return Result(task_id=task.id, success=True, output="Pure Python App generated.")
+                return Result(task_id=task.id, success=True, output="Code generated.")
         except Exception as e:
             return Result(task_id=task.id, success=False, output=str(e))

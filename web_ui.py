@@ -1,133 +1,155 @@
+"""OMID AI - FastAPI Backend with SSE"""
 import os
 import glob
 import json
 import asyncio
-import subprocess
-import logging
-import traceback
-from datetime import datetime
-from pathlib import Path
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, StreamingResponse
+import datetime
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from agents.base import BaseAgent
 from core.manager import ManagerAgent
-from core.memory import MemoryStore
+from core.db import get_db
 
-app = FastAPI()
+app = FastAPI(title="OMID AI")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-sse_queues: list[asyncio.Queue] = []
+os.makedirs("static", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-class MissionGoal(BaseModel):
-    goal: str
+manager = ManagerAgent(config={}, memory=get_db())
+sse_queues = set()
 
-def broadcast(event_type: str, data: dict) -> None:
-    print(f"[DASHBOARD] {event_type} -> {data}", flush=True)
-    if not isinstance(data, dict):
-        data = {"message": str(data)}
-    for q in sse_queues:
-        q.put_nowait({"type": event_type, "data": data})
+async def broadcast_event(event_type: str, data: dict):
+    message = {
+        "event": event_type,
+        "data": data,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+    dead_queues = set()
+    for queue in sse_queues:
+        try:
+            queue.put_nowait(message)
+        except asyncio.QueueFull:
+            dead_queues.add(queue)
+    sse_queues -= dead_queues
 
-import agents.base
-def custom_log_event(self, event_type, data):
-    print(f"[LOG] {data.get('agent', 'System')}: {data.get('status', '')}", flush=True)
-    broadcast(event_type, data)
-agents.base.BaseAgent.log_event = custom_log_event
+BaseAgent.log_callback = broadcast_event
 
-@app.get("/")
-async def index() -> FileResponse:
-    return FileResponse("index.html")
+class ChatRequest(BaseModel):
+    message: str
 
-async def run_mission(goal: str):
+@app.get("/", response_class=HTMLResponse)
+async def serve_ui():
+    html_path = "index.html"
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    return HTMLResponse("<h1>OMID AI - Index not found</h1>")
+
+@app.post("/api/chat")
+async def chat_endpoint(request: ChatRequest):
     try:
-        print(f"\n--> [MISSION STARTED] {goal}", flush=True)
-        broadcast("working", {"agent": "Manager", "status": "Planning tasks..."})
-        memory = MemoryStore()
-        manager = ManagerAgent(config={}, memory=memory)
-        await manager.plan_and_dispatch(goal)
-        print("--> [MISSION FINISHED]", flush=True)
-        
-        # 👇 این خط مهم‌ترین بخش است: ارسال سیگنال پایان کل کارها
-        broadcast("all_tasks_done", {"agent": "System", "status": "Complete"})
-        
+        results = await manager.plan_and_dispatch(request.message)
+        response_text = ""
+        for result in results:
+            if result and result.success:
+                if isinstance(result.output, str):
+                    response_text += result.output + "\n"
+                elif isinstance(result.output, dict):
+                    if "persian_report" in result.output:
+                        response_text += result.output.get("persian_report") + "\n"
+                    elif "code" in result.output:
+                        response_text += result.output["code"] + "\n"
+                    else:
+                        response_text += json.dumps(result.output, ensure_ascii=False, indent=2) + "\n"
+            else:
+                error_msg = result.error if result else "Unknown error"
+                response_text += f"❌ Error: {error_msg}\n"
+        return {"response": response_text.strip(), "success": True}
     except Exception as e:
-        traceback.print_exc()
-        broadcast("fail", {"agent": "Manager", "status": f"Error: {str(e)}"})
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/mission")
-async def post_mission(payload: MissionGoal) -> dict:
-    asyncio.create_task(run_mission(payload.goal))
-    return {"status": "started"}
+async def mission_endpoint(request: ChatRequest):
+    return await chat_endpoint(request)
 
 @app.get("/api/files")
-async def get_files() -> dict:
-    files = glob.glob("src/**/*.py", recursive=True)
-    # مرتب‌سازی بر اساس زمان تغییر (جدیدترین‌ها اول)
-    files.sort(key=os.path.getmtime, reverse=True)
-    files = files[:30] # فقط ۳۰ فایل آخر
-    return {"files": [os.path.relpath(f, "src") for f in files]}
+async def get_files():
+    """List all .py files inside the src/ directory for the Code Explorer"""
+    files = []
+    if os.path.exists("src"):
+        for path in glob.glob("src/**/*.py", recursive=True):
+            files.append(os.path.relpath(path, "src"))
+    files.sort()
+    return {"files": files}
 
-@app.get("/api/file/{filename:path}")
-async def get_file(filename: str) -> dict:
-    try:
-        with open(os.path.join("src", filename), "r") as f:
-            return {"code": f.read()}
-    except Exception:
-        return {"code": "# File not found"}
+@app.get("/api/projects")
+async def get_projects():
+    db = get_db()
+    with db.get_connection() as conn:
+        rows = conn.execute("SELECT * FROM projects ORDER BY created_at DESC").fetchall()
+        return {"projects": [dict(row) for row in rows]}
 
-@app.get("/api/reports")
-async def get_reports() -> dict:
-    report_dir = "/sdcard/omid-ai/security_scans"
-    if not os.path.exists(report_dir):
-        return {"reports": []}
-    files = [f for f in os.listdir(report_dir) if f.endswith('.md')]
-    files.sort(key=lambda x: os.path.getmtime(os.path.join(report_dir, x)), reverse=True)
-    return {"reports": files}
+@app.get("/api/security-scans")
+async def get_security_scans():
+    db = get_db()
+    with db.get_connection() as conn:
+        rows = conn.execute("SELECT * FROM security_scans ORDER BY created_at DESC").fetchall()
+        return {"scans": [dict(row) for row in rows]}
 
-@app.get("/api/reports/{filename}")
-async def get_report_content(filename: str) -> dict:
-    if ".." in filename or "/" in filename:
-        return {"error": "Invalid filename"}
-    file_path = f"/sdcard/omid-ai/security_scans/{filename}"
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            return {"content": f.read()}
-    return {"error": "Report not found"}
+@app.get("/api/memory")
+async def get_memory():
+    db = get_db()
+    return {"preferences": db.get_preferences()}
 
+@app.get("/api/agent-logs")
+async def get_agent_logs(limit: int = 50):
+    db = get_db()
+    with db.get_connection() as conn:
+        rows = conn.execute("SELECT * FROM agent_logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        return {"logs": [dict(row) for row in rows]}
 
-
-@app.delete("/api/files/{filename:path}")
-async def delete_project_file(filename: str) -> dict:
-    file_path = os.path.join("src", filename)
-    if os.path.exists(file_path):
+@app.get("/api/logs")
+async def sse_logs(request: Request):
+    queue = asyncio.Queue(maxsize=100)
+    sse_queues.add(queue)
+    
+    async def event_generator():
         try:
-            os.remove(file_path)
-            return {"status": "success"}
-        except Exception as e:
-            return {"status": "error", "detail": str(e)}
-    return {"status": "error", "detail": "File not found"}
-
-@app.get("/sse")
-async def sse_endpoint():
-    queue: asyncio.Queue = asyncio.Queue()
-    sse_queues.append(queue)
-    async def gen():
-        try:
+            yield f"event: connected\ndata: {json.dumps({'message': 'SSE connection established'})}\n\n"
             while True:
+                if await request.is_disconnected():
+                    break
                 try:
-                    msg = await asyncio.wait_for(queue.get(), timeout=10.0)
-                    yield f"data: {json.dumps(msg)}\n\n"
+                    event = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    event_name = event.get("event", "log")
+                    data_str = json.dumps(event.get("data", {}), ensure_ascii=False)
+                    yield f"event: {event_name}\ndata: {data_str}\n\n"
                 except asyncio.TimeoutError:
-                    yield ": keep-alive\n\n"
-        except asyncio.CancelledError:
-            pass
+                    hb_data = json.dumps({"timestamp": datetime.datetime.now().isoformat()})
+                    yield f"event: heartbeat\ndata: {hb_data}\n\n"
         finally:
-            if queue in sse_queues:
-                sse_queues.remove(queue)
-    return StreamingResponse(gen(), media_type="text/event-stream")
+            sse_queues.discard(queue)
+            
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
