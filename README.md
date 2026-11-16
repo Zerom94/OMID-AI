@@ -1,26 +1,18 @@
-# 🤖 OMID AI - Multi-Agent System
+# 🚀 OMID AI - Autonomous Multi-Agent System
 
-یک سیستم هوش مصنوعی چندعاملی (Multi-Agent) قدرتمند، سبک و کاملاً خودکار که بر روی موبایل (Termux) و محیط‌های ابری اجرا می‌شود.
+**OMID AI** is a fully autonomous, multi-agent AI system built with Python and FastAPI. It operates in a secure, sandboxed environment, allowing you to interact with specialized agents for coding, security auditing, content creation, and research.
 
-## 🚀 ویژگی‌های کلیدی
-- **معماری چندعاملی:** دارای ایجنت‌های تخصصی برای برنامه‌نویسی (Developer)، امنیت (Security)، حسابرس (Auditor)، مدیریت (Manager) و تحقیق (Researcher).
-- **هوش مصنوعی و خودتعمیری:** قابلیت یادگیری از گیت‌هاب (`!study`) و بهینه‌سازی کدهای خود (`!evolve`).
-- **امنیت و اتوماسیون:** اسکن خودکار وب‌سایت‌ها، تولید گزارش‌های امنیتی فارسی و بررسی کدهای مخرب.
-- **رابط کاربری مدرن:** داشبورد وب شیشه‌ای با پشتیبانی از چت و مشاهده زنده لاگ‌ها.
-- **نمونه‌کار (Portfolio):** شامل ابزارهای تولید شده توسط هوش مصنوعی (مثل Port Scanner) و گزارش‌های امنیتی در پوشه `OMID_Portfolio`.
+## 🌟 Key Features
+- 🧠 **Smart LLM Routing:** Dispatches tasks to specialist agents.
+- 💾 **Persistent Memory (RAG):** SQLite-backed memory for user preferences and chat history.
+- 💻 **Standalone Code Generation:** Production-ready Python scripts.
+- 🛡️ **Real Ethical Hacking:** Executes real Nmap, Ping, and Whois scans.
+- 🎨 **Cyberpunk UI:** Fully RTL, Glassmorphism dashboard with live SSE logs.
 
-## 🛠️ تکنولوژی‌های استفاده شده
-- **Backend:** Python, FastAPI
-- **Frontend:** HTML, Tailwind CSS, JavaScript
-- **AI Engine:** Groq (OpenAI GPT-OSS 120B) via Smart Router
-- **Deployment:** Docker, SnapDeploy
-
-## 📂 ساختار پروژه
-- `agents/` : کدهای مربوط به تمامی ایجنت‌های هوش مصنوعی
-- `core/` : هسته مرکزی سیستم (مدیریت حافظه، وظایف و روتر)
-- `OMID_Portfolio/` : نمونه‌کارها و خروجی‌های امنیتی تولید شده
-- `web_ui.py` : سرور FastAPI و رابط کاربری
-- `smart_router.py` : سیستم مسیریابی هوشمند بین مدل‌های هوش مصنوعی
+## 💻 Tech Stack
+- **Backend:** Python, FastAPI, SQLite
+- **AI Engine:** Groq API (openai/gpt-oss-120b)
+- **Frontend:** HTML, CSS, JavaScript
 
 ---
-*Developed by Omid (Zerom94)*
+*Developed by [Zerom94](https://github.com/Zerom94)*
