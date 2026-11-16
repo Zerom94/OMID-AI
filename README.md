@@ -16,3 +16,33 @@
 
 ---
 *Developed by [Zerom94](https://github.com/Zerom94)*
+
+## 🚀 Quick Start
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Zerom94/OMID-AI.git
+   cd OMID-AI
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Set up environment variables:**
+   Create a `.env` file and add your Groq API key:
+   ```env
+   GROQ_API_KEY="gsk_your_api_key_here"
+   ```
+
+4. **Start the LLM Router (Terminal 1):**
+   ```bash
+   python smart_router.py
+   ```
+
+5. **Start the Web Dashboard (Terminal 2):**
+   ```bash
+   python web_ui.py
+   ```
+   Access the dashboard at `http://localhost:8000`.

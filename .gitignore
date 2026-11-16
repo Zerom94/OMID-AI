@@ -1,6 +1,35 @@
+# --- Secrets & Environment ---
 .env
-*.log
+config.json
+
+# --- Databases (SQLite) ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Backups & Temp Files ---
+*.backup
 *.bak
-*.zip
+*_backup/
+final_backup/
+OMID_AI_FULL_CODEBASE.txt
+
+# --- Dynamic JSON Data ---
+chat_history.json
+memory_rag.json
+rag_memory.json
+project_counter.json
+scan_results.json
+agents_knowledge.json
+
+# --- Security Reports (Keep the folder, ignore contents) ---
+security_scans/*
+!security_scans/.gitkeep
+
+# --- Python Cache ---
 __pycache__/
 *.pyc
+
+# --- OS Files ---
+.DS_Store
+Thumbs.db
